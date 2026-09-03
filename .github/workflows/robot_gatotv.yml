@@ -1,0 +1,41 @@
+name: Motor EPG Automático (GatoTV)
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # Se ejecuta todos los días a las 2:00 AM (Hora de México)
+  workflow_dispatch: # Activa un botón para que puedas forzarlo manualmente
+
+permissions:
+  contents: write
+
+jobs:
+  extraer-guia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Conectar a mi repositorio
+        uses: actions/checkout@v4
+
+      - name: 2. Preparar el servidor
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 3. Descargar el motor IPTV
+        run: |
+          git clone https://github.com/iptv-org/epg.git motor
+          cd motor
+          npm install
+
+      - name: 4. Extraer toda la guia de GatoTV
+        run: |
+          cd motor
+          npm run grab -- --site=gatotv.com
+          mv guide.xml ../gatotv.xml
+
+      - name: 5. Guardar el EPG en mi cuenta
+        run: |
+          git config --local user.email "bot@pacotv.com"
+          git config --local user.name "PacoTV Robot"
+          git add gatotv.xml
+          git commit -m "Actualización EPG exitosa" || echo "Sin cambios nuevos"
+          git push
